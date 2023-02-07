@@ -1,0 +1,23 @@
+.scoreboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 1000px;
+    text-align: center;
+}
+
+.scoreboard__name,
+.scoreboard__score1,
+.scoreboard__score2 {
+    padding: 10px;
+    text-align: center;
+}
+
+.scoreboard__name {
+    font-weight: bold;
+    border-bottom: 1px solid #ddd;
+}
+
+.scoreboard__score1,
+.scoreboard__score2 {
+    font-size: 2em;
+}
