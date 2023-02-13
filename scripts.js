@@ -79,11 +79,11 @@ function loop() {
 
   // "AI" for left paddle
   if (leftPaddle.y + leftPaddle.height < ball.y){
-    leftPaddle.y += paddleSpeed;
+    leftPaddle.y += paddleSpeed-3;
   }else if(leftPaddle.y > ball.y){
-    leftPaddle.y -= paddleSpeed*2;
+    leftPaddle.y -= paddleSpeed-3;
   }else if(ball.dy >0){
-    leftPaddle.y += paddleSpeed;
+    leftPaddle.y += paddleSpeed-3;
   }
 
   // prevent paddles from going through walls
