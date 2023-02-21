@@ -1,5 +1,5 @@
 // start button
-const startBtn = document.getElementByID("startButton");
+const startBtn = document.getElementById("startButton");
 const resettingContainer = document.getElementById("resettingContainer");
 const resettingText = document.getElementById("resettingText");
 const canvas = document.getElementById('game');
