@@ -1,3 +1,7 @@
+// start button
+const startBtn = document.getElementByID("startButton");
+const resettingContainer = document.getElementById("resettingContainer");
+const resettingText = document.getElementById("resettingText");
 const canvas = document.getElementById('game');
 const context = canvas.getContext('2d');
 const grid = 15;
@@ -17,7 +21,8 @@ var t = setInterval(function() {
     document.getElementById("sb2").innerHTML = score2;
   }, 500);
 
-
+resettingContainer.style.visibility = "hidden";
+resettingText.style.visibility = "hidden";
 
 const leftPaddle = {
   // start in the middle of the game on the left side
@@ -53,6 +58,12 @@ const ball = {
   dx: ballSpeed,
   dy: -ballSpeed
 };
+
+startBtn.addEventListener("click", () => {
+    const welcomeScreen = document.querySelector(".welcome-screen");
+    const canvas = document.querySelector("canvas");
+    welcomeScreen.style.display = "none";
+    canvas.style.display = "block";
 
 // check for collision between two objects using axis-aligned bounding box (AABB)
 // @see https://developer.mozilla.org/en-US/docs/Games/Techniques/2D_collision_detection
@@ -132,12 +143,17 @@ rightPaddle.y += rightPaddle.dy;
       if(ball.x > canvas.width){
         score1++
       }
+      resettingContainer.style.visibility = "visible";
+      resettingText.style.visibility = "visible";
 
     // give some time for the player to recover before launching the ball again
     setTimeout(() => {
       ball.resetting = false;
       ball.x = canvas.width / 2;
       ball.y = canvas.height / 2;
+        
+      resettingContainer.style.visibility = "hidden";
+      resettingText.style.visibility = "hidden";
     }, 400);
   }
 // score criteria to exit/restart cancelled the animation, reset score, and sent to endgame function
@@ -206,6 +222,7 @@ document.addEventListener('keyup', function(e) {
   if (e.which === 38 || e.which === 40) {
     rightPaddle.dy = 0;
   }
+  
 
   /// deleted left paddle key release control
   
