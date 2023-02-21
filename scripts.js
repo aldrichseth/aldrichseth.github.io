@@ -4,6 +4,10 @@ const grid = 15;
 const paddleHeight = grid * 5; // 80
 const maxPaddleY = canvas.height - grid - paddleHeight;
 
+
+// adding the sounds to the game
+var PONG_SOUND = new Audio('PING.mp4')
+
 var paddleSpeed = 6;
 var ballSpeed = 5;
 var score1 = 0;
@@ -152,6 +156,7 @@ rightPaddle.y += rightPaddle.dy;
   // check to see if ball collides with paddle. if they do change x velocity
   if (collides(ball, leftPaddle)) {
     ball.dx *= -1;
+    PONG_SOUND.play()
 
     // move ball next to the paddle otherwise the collision will happen again
     // in the next frame
@@ -159,6 +164,7 @@ rightPaddle.y += rightPaddle.dy;
   }
   else if (collides(ball, rightPaddle)) {
     ball.dx *= -1;
+    PONG_SOUND.play()
 
     // move ball next to the paddle otherwise the collision will happen again
     // in the next frame
