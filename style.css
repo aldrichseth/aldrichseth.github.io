@@ -11,6 +11,7 @@ html, body {
     flex-direction: column;
   }
 
+
   .welcome-screen {
     position: absolute;
     top: 0;
@@ -46,6 +47,15 @@ canvas {
     grid-template-columns: 1fr 1fr;
     width: 750px;
     text-align: center;
+
+
+    
+.scoreboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 1000px;
+  text-align: center;
+
 }
 
 .scoreboard__name,
@@ -95,6 +105,7 @@ h1 {
 button:hover {
     background-color:#3e8e41;
 }
+
 .ending{
     display: none;
     position: fixed;

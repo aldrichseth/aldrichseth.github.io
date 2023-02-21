@@ -6,6 +6,9 @@ startButton.addEventListener("click", () => {
     welcomeScreen.style.display="none";
     canvas.style.display = "block";
 });
+
+
+
 const canvas = document.getElementById('game');
 const context = canvas.getContext('2d');
 const grid = 15;
@@ -146,7 +149,6 @@ rightPaddle.y += rightPaddle.dy;
       if(ball.x > canvas.width){
         score1++
       }
-     
 
     // give some time for the player to recover before launching the ball again
     setTimeout(() => {
@@ -154,7 +156,6 @@ rightPaddle.y += rightPaddle.dy;
       ball.x = canvas.width / 2;
       ball.y = canvas.height / 2;
         
-     
     }, 400);
   }
 // score criteria to exit/restart cancelled the animation, reset score, and sent to endgame function
