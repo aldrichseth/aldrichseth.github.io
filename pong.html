@@ -5,9 +5,10 @@
   <title>Basic Pong HTML Game</title>
   <link rel="stylesheet" type = "text/css" href="style.css">
   <meta charset="UTF-8">
-  </head>
+</head>
   <body>
-  <div class = "scoreboard">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Audiowide">
+    <div class = "scoreboard">
     <div class = "scoreboard__name">Player One</div>
     <div class = "scoreboard__name">Player Two</div>
     <div class = "scoreboard__score1" id = "sb1" ></div>
@@ -18,7 +19,7 @@
     </h1>
     <button onclick = "restartGame();" class = "againButton">Play Again</button>
 </div>
-<canvas width = "750" height= "585" id= "game"></canvas>
+<canvas width = "750" height= "585" id= "game" class = "game"></canvas>
   <script src="scripts.js"></script>
 </body>
 </html>
