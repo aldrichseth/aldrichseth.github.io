@@ -1,10 +1,23 @@
 // start button
+const startButton = document.getElementById("startButton");
+startButton.addEventListener("click", () => {
+    const welcomeScreen = document.querySelector(".welcome-screen");
+    const canvas = document.querySelector("canvas");
+    welcomeScreen.style.display="none";
+    canvas.style.display = "block";
+});
+
+
 
 const canvas = document.getElementById('game');
 const context = canvas.getContext('2d');
 const grid = 15;
 const paddleHeight = grid * 5; // 80
 const maxPaddleY = canvas.height - grid - paddleHeight;
+
+
+// adding the sounds to the game
+var PONG_SOUND = new Audio('PING.mp4')
 
 var paddleSpeed = 6;
 var ballSpeed = 5;
@@ -136,7 +149,6 @@ rightPaddle.y += rightPaddle.dy;
       if(ball.x > canvas.width){
         score1++
       }
-      
 
     // give some time for the player to recover before launching the ball again
     setTimeout(() => {
@@ -144,7 +156,6 @@ rightPaddle.y += rightPaddle.dy;
       ball.x = canvas.width / 2;
       ball.y = canvas.height / 2;
         
-      
     }, 400);
   }
 // score criteria to exit/restart cancelled the animation, reset score, and sent to endgame function
@@ -159,6 +170,7 @@ rightPaddle.y += rightPaddle.dy;
   // check to see if ball collides with paddle. if they do change x velocity
   if (collides(ball, leftPaddle)) {
     ball.dx *= -1;
+    PONG_SOUND.play()
 
     // move ball next to the paddle otherwise the collision will happen again
     // in the next frame
@@ -166,6 +178,7 @@ rightPaddle.y += rightPaddle.dy;
   }
   else if (collides(ball, rightPaddle)) {
     ball.dx *= -1;
+    PONG_SOUND.play()
 
     // move ball next to the paddle otherwise the collision will happen again
     // in the next frame
