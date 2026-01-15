@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Application Burnup Dashboard</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="data.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="w-full max-w-7xl mx-auto p-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2 text-center"><span id="orgTitle"></span> Application Burnup Dashboard</h1>
+        <p class="text-center text-gray-600 mb-4" id="dateRange"></p>
+
+        <!-- Organization Selector with Hierarchical View -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+            <div class="flex items-center gap-4">
+                <label class="text-sm font-semibold text-gray-700">Select Organization:</label>
+                <div class="flex-1 max-w-md relative">
+                    <button id="orgSelectorButton" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium text-left flex justify-between items-center bg-white hover:bg-gray-50">
+                        <span id="selectedOrgText">Select...</span>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div id="orgDropdown" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+                        <!-- All Applications Category -->
+                        <div class="border-b border-gray-200">
+                            <button class="category-toggle w-full px-4 py-2 text-left font-semibold text-gray-700 hover:bg-gray-50 flex justify-between items-center" data-category="all">
+                                <span>All Applications</span>
+                                <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div id="category-all" class="category-items">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <!-- CMMC Applications Category -->
+                        <div class="border-b border-gray-200">
+                            <button class="category-toggle w-full px-4 py-2 text-left font-semibold text-gray-700 hover:bg-gray-50 flex justify-between items-center" data-category="cmmc">
+                                <span>CMMC Applications</span>
+                                <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div id="category-cmmc" class="category-items hidden">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <!-- Non-CMMC Applications Category -->
+                        <div>
+                            <button class="category-toggle w-full px-4 py-2 text-left font-semibold text-gray-700 hover:bg-gray-50 flex justify-between items-center" data-category="noncmmc">
+                                <span>Non-CMMC Applications</span>
+                                <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div id="category-noncmmc" class="category-items hidden">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="text-sm text-gray-600 mb-1">Total Requirements</div>
+                <div class="flex items-center gap-2">
+                    <div class="text-3xl font-bold text-gray-800" id="totalReqs"></div>
+                    <div id="totalReqsTrend" class="text-sm font-semibold"></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="text-sm text-gray-600 mb-1">Completed</div>
+                <div class="flex items-center gap-2">
+                    <div class="text-3xl font-bold text-blue-600" id="completed"></div>
+                    <div id="completedTrend" class="text-sm font-semibold"></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="text-sm text-gray-600 mb-1">Remaining</div>
+                <div class="flex items-center gap-2">
+                    <div class="text-3xl font-bold text-orange-600" id="remaining"></div>
+                    <div id="remainingTrend" class="text-sm font-semibold"></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="text-sm text-gray-600 mb-1">Progress</div>
+                <div class="flex items-center gap-2">
+                    <div class="text-3xl font-bold text-green-600" id="progress"></div>
+                    <div id="progressTrend" class="text-sm font-semibold"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Missing Items Breakdown -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="font-semibold text-gray-800 mb-4">Remaining Items Breakdown</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-red-50 rounded p-3">
+                    <div class="text-sm text-gray-600 mb-2">Missing Mandatory Fields</div>
+                    <div class="flex items-center gap-2">
+                        <div class="text-2xl font-bold text-red-600" id="missingMandatory"></div>
+                        <div id="missingMandatoryTrend" class="text-sm font-semibold"></div>
+                    </div>
+                </div>
+                <div class="bg-orange-50 rounded p-3">
+                    <div class="text-sm text-gray-600 mb-2">Missing Quality Seal</div>
+                    <div class="flex items-center gap-2">
+                        <div class="text-2xl font-bold text-orange-600" id="missingQuality"></div>
+                        <div id="missingQualityTrend" class="text-sm font-semibold"></div>
+                    </div>
+                </div>
+                <div class="bg-yellow-50 rounded p-3">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-sm text-gray-600">Missing Approvals</div>
+                        <button id="toggleApprovals" class="text-xs px-2 py-0.5 bg-yellow-200 hover:bg-yellow-300 rounded font-medium transition-colors">
+                            Include
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="text-2xl font-bold text-yellow-600" id="missingApprovals"></div>
+                        <div id="missingApprovalsTrend" class="text-sm font-semibold"></div>
+                    </div>
+                </div>
+                <div class="bg-purple-50 rounded p-3">
+                    <div class="text-sm text-gray-600 mb-2">Missing Surveys</div>
+                    <div class="flex items-center gap-2">
+                        <div class="text-2xl font-bold text-purple-600" id="missingSurveys"></div>
+                        <div id="missingSurveysTrend" class="text-sm font-semibold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Items & Percentage Per Week Banners -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg shadow-md p-4">
+                <div class="flex items-center gap-3">
+                    <div class="text-yellow-600">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-600">Items needed per week:</div>
+                        <div class="flex items-center gap-2">
+                            <div class="text-2xl font-bold text-gray-800" id="itemsPerWeek"></div>
+                            <div id="itemsPerWeekTrend" class="text-sm font-semibold"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-green-50 border-l-4 border-green-400 rounded-lg shadow-md p-4">
+                <div class="flex items-center gap-3">
+                    <div class="text-green-600">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-600">Progress needed per week:</div>
+                        <div class="flex items-center gap-2">
+                            <div class="text-2xl font-bold text-gray-800" id="percentagePerWeek"></div>
+                            <div id="percentagePerWeekTrend" class="text-sm font-semibold"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Container with Toggle -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold text-gray-800">Burnup Chart</h3>
+                <div class="flex gap-2">
+                    <button id="btnItems" class="px-4 py-2 rounded-lg font-medium transition-colors bg-blue-600 text-white">
+                        Items
+                    </button>
+                    <button id="btnPercentage" class="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300">
+                        Percentage
+                    </button>
+                </div>
+            </div>
+            <div id="chart" class="flex justify-center items-center"></div>
+        </div>
+
+        <!-- Progress Tracking Table -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="font-semibold text-gray-800 mb-4">Weekly Progress History</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Week Ending</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Apps</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Reqs</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items Completed</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">% Complete</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items Remaining</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items/Week Needed</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">%/Week Needed</th>
+                        </tr>
+                    </thead>
+                    <tbody id="progressTable" class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="bg-blue-50 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+                <div class="text-blue-600 mt-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-800 mb-1">How to Read This Chart</h3>
+                    <p class="text-sm text-gray-700">
+                        The solid gray line shows the total scope (100% or total requirements). The dashed gray line shows the expected linear progress from the first data point to the target date. 
+                        The green area shows the required progress path to meet the target date based on current progress. 
+                        The blue line shows actual weekly progress.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentOrgName = null;
+        let currentDataSource = 'all'; // 'all', 'cmmc', or 'noncmmc'
+        let includeApprovals = true;
+        let currentView = 'items';
+        let weeklyProgress = [];
+        let startDate = null;
+        let targetDate = null;
+        let totalRequirements = 0;
+        let chartData = [];
+
+        // Populate organization dropdown with hierarchical structure
+        function populateOrgDropdown() {
+            // Populate All Applications
+            const allContainer = document.getElementById('category-all');
+            const allOrgNames = Object.keys(ORG_DATA).sort();
+            allOrgNames.forEach(orgName => {
+                const item = document.createElement('button');
+                item.className = 'org-item w-full px-8 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 focus:bg-blue-100';
+                item.textContent = orgName;
+                item.dataset.org = orgName;
+                item.dataset.source = 'all';
+                allContainer.appendChild(item);
+            });
+
+            // Populate CMMC Applications
+            const cmmcContainer = document.getElementById('category-cmmc');
+            const cmmcOrgNames = Object.keys(ORG_DATA_CMMC).sort();
+            cmmcOrgNames.forEach(orgName => {
+                const item = document.createElement('button');
+                item.className = 'org-item w-full px-8 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 focus:bg-blue-100';
+                item.textContent = orgName;
+                item.dataset.org = orgName;
+                item.dataset.source = 'cmmc';
+                cmmcContainer.appendChild(item);
+            });
+
+            // Populate Non-CMMC Applications
+            const noncmmcContainer = document.getElementById('category-noncmmc');
+            const noncmmcOrgNames = Object.keys(ORG_DATA_NONCMMC).sort();
+            noncmmcOrgNames.forEach(orgName => {
+                const item = document.createElement('button');
+                item.className = 'org-item w-full px-8 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 focus:bg-blue-100';
+                item.textContent = orgName;
+                item.dataset.org = orgName;
+                item.dataset.source = 'noncmmc';
+                noncmmcContainer.appendChild(item);
+            });
+
+            // Set initial organization (first from All Applications)
+            if (allOrgNames.length > 0) {
+                currentOrgName = allOrgNames[0];
+                currentDataSource = 'all';
+                document.getElementById('selectedOrgText').textContent = `All Applications → ${currentOrgName}`;
+                loadOrganization(currentOrgName, 'all');
+            }
+
+            // Add event listeners to all org items
+            document.querySelectorAll('.org-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const orgName = item.dataset.org;
+                    const source = item.dataset.source;
+                    const categoryLabel = source === 'all' ? 'All Applications' : 
+                                        source === 'cmmc' ? 'CMMC Applications' : 
+                                        'Non-CMMC Applications';
+                    document.getElementById('selectedOrgText').textContent = `${categoryLabel} → ${orgName}`;
+                    loadOrganization(orgName, source);
+                    toggleDropdown(false);
+                });
+            });
+        }
+
+        // Toggle dropdown visibility
+        function toggleDropdown(show) {
+            const dropdown = document.getElementById('orgDropdown');
+            if (show === undefined) {
+                dropdown.classList.toggle('hidden');
+            } else {
+                if (show) {
+                    dropdown.classList.remove('hidden');
+                } else {
+                    dropdown.classList.add('hidden');
+                }
+            }
+        }
+
+        // Toggle category expansion
+        document.querySelectorAll('.category-toggle').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const category = button.dataset.category;
+                const itemsContainer = document.getElementById(`category-${category}`);
+                const arrow = button.querySelector('svg');
+                
+                itemsContainer.classList.toggle('hidden');
+                arrow.classList.toggle('rotate-180');
+            });
+        });
+
+        // Dropdown button click
+        document.getElementById('orgSelectorButton').addEventListener('click', () => {
+            toggleDropdown();
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('orgDropdown');
+            const button = document.getElementById('orgSelectorButton');
+            if (!dropdown.contains(e.target) && !button.contains(e.target)) {
+                toggleDropdown(false);
+            }
+        });
+
+        // Load organization data
+        function loadOrganization(orgName, source) {
+            let dataSource;
+            switch(source) {
+                case 'cmmc':
+                    dataSource = ORG_DATA_CMMC;
+                    break;
+                case 'noncmmc':
+                    dataSource = ORG_DATA_NONCMMC;
+                    break;
+                default:
+                    dataSource = ORG_DATA;
+            }
+
+            const orgConfig = dataSource[orgName];
+            
+            if (!orgConfig) {
+                alert(`Organization "${orgName}" not found in ${source} data`);
+                return;
+            }
+
+            currentOrgName = orgName;
+            currentDataSource = source;
+            weeklyProgress = orgConfig.weeklyProgress;
+            
+            const [startYear, startMonth, startDay] = orgConfig.startDate.split('-').map(Number);
+            startDate = new Date(startYear, startMonth - 1, startDay);
+            
+            const [targetYear, targetMonth, targetDay] = orgConfig.targetDate.split('-').map(Number);
+            targetDate = new Date(targetYear, targetMonth - 1, targetDay);
+            
+            // Update title
+            document.getElementById('orgTitle').textContent = orgName;
+            
+            // Reset approvals toggle
+            includeApprovals = true;
+            const btn = document.getElementById('toggleApprovals');
+            btn.textContent = 'Include';
+            btn.className = 'text-xs px-2 py-1 bg-yellow-200 hover:bg-yellow-300 rounded font-medium transition-colors';
+            
+            // Recalculate and rebuild
+            const metrics = recalculateMetrics();
+            totalRequirements = metrics.totalRequirements;
+            chartData = rebuildChartAndTable();
+            createChart(currentView);
+            updateBreakdownCards();
+        }
+
+        function formatDate(date) {
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const year = date.getFullYear();
+            return `${month}/${day}/${year}`;
+        }
+
+        function parseDate(dateStr) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+
+        function createAbsoluteTrendIndicator(current, previous, reverseColors = false) {
+            if (previous === null || previous === undefined) return '';
+            const change = current - previous;
+            if (change === 0) return `<span class="text-gray-500">→ 0</span>`;
+            const isIncrease = change > 0;
+            const isGood = reverseColors ? !isIncrease : isIncrease;
+            const color = isGood ? 'text-green-600' : 'text-red-600';
+            const arrow = isIncrease ? '↑' : '↓';
+            return `<span class="${color}">${arrow} ${Math.abs(change)}</span>`;
+        }
+
+        function createPercentageDifferenceTrendIndicator(currentPercent, previousPercent, reverseColors = false) {
+            if (previousPercent === null || previousPercent === undefined) return '';
+            const change = currentPercent - previousPercent;
+            if (Math.abs(change) < 0.01) return `<span class="text-gray-500">→ 0.0%</span>`;
+            const isIncrease = change > 0;
+            const isGood = reverseColors ? !isIncrease : isIncrease;
+            const color = isGood ? 'text-green-600' : 'text-red-600';
+            const arrow = isIncrease ? '↑' : '↓';
+            return `<span class="${color}">${arrow} ${Math.abs(change).toFixed(1)}%</span>`;
+        }
+
+        function recalculateMetrics() {
+            const latestWeek = weeklyProgress[weeklyProgress.length - 1];
+            const previousWeek = weeklyProgress.length > 1 ? weeklyProgress[weeklyProgress.length - 2] : null;
+
+            const totalApplications = latestWeek.totalApplications;
+            const totalRequirements = totalApplications * 4;
+            const totalMissingItems = latestWeek.missingMandatory + latestWeek.missingQuality + 
+                                      (includeApprovals ? latestWeek.missingApprovals : 0) + 
+                                      latestWeek.missingSurveys;
+            const completedItems = totalRequirements - totalMissingItems;
+            const percentageComplete = (completedItems / totalRequirements) * 100;
+            
+            const currentDate = parseDate(latestWeek.date);
+            const millisecondsPerWeek = 7 * 24 * 60 * 60 * 1000;
+            const weeksRemaining = Math.max(1, Math.ceil((targetDate - currentDate) / millisecondsPerWeek));
+            const itemsPerWeek = Math.round(totalMissingItems / weeksRemaining);
+            const percentagePerWeek = ((totalMissingItems / totalRequirements) / weeksRemaining * 100);
+
+            let prevTotalApplications = null, prevTotalRequirements = null, prevTotalMissing = null;
+            let prevCompleted = null, prevPercentageComplete = null;
+            let prevItemsPerWeek = null, prevPercentagePerWeek = null;
+
+            if (previousWeek) {
+                prevTotalApplications = previousWeek.totalApplications;
+                prevTotalRequirements = prevTotalApplications * 4;
+                prevTotalMissing = previousWeek.missingMandatory + previousWeek.missingQuality + 
+                                  (includeApprovals ? previousWeek.missingApprovals : 0) + 
+                                  previousWeek.missingSurveys;
+                prevCompleted = prevTotalRequirements - prevTotalMissing;
+                prevPercentageComplete = (prevCompleted / prevTotalRequirements) * 100;
+                const prevDate = parseDate(previousWeek.date);
+                const prevWeeksRemaining = Math.max(1, Math.ceil((targetDate - prevDate) / millisecondsPerWeek));
+                prevItemsPerWeek = Math.round(prevTotalMissing / prevWeeksRemaining);
+                prevPercentagePerWeek = ((prevTotalMissing / prevTotalRequirements) / prevWeeksRemaining * 100);
+            }
+
+            // Update display
+            document.getElementById('dateRange').textContent = `${formatDate(startDate)} - ${formatDate(targetDate)}`;
+            document.getElementById('totalReqs').textContent = totalRequirements.toLocaleString();
+            document.getElementById('totalReqsTrend').innerHTML = createAbsoluteTrendIndicator(totalRequirements, prevTotalRequirements, true);
+            document.getElementById('completed').textContent = completedItems.toLocaleString();
+            document.getElementById('completedTrend').innerHTML = createAbsoluteTrendIndicator(completedItems, prevCompleted, false);
+            document.getElementById('remaining').textContent = totalMissingItems.toLocaleString();
+            document.getElementById('remainingTrend').innerHTML = createAbsoluteTrendIndicator(totalMissingItems, prevTotalMissing, true);
+            document.getElementById('progress').textContent = `${percentageComplete.toFixed(1)}%`;
+            document.getElementById('progressTrend').innerHTML = createPercentageDifferenceTrendIndicator(percentageComplete, prevPercentageComplete, false);
+            document.getElementById('itemsPerWeek').textContent = `${itemsPerWeek} items`;
+            document.getElementById('itemsPerWeekTrend').innerHTML = createAbsoluteTrendIndicator(itemsPerWeek, prevItemsPerWeek, true);
+            document.getElementById('percentagePerWeek').textContent = `${percentagePerWeek.toFixed(1)}%`;
+            document.getElementById('percentagePerWeekTrend').innerHTML = createPercentageDifferenceTrendIndicator(percentagePerWeek, prevPercentagePerWeek, true);
+
+            return { totalRequirements, completedItems, totalMissingItems, percentageComplete };
+        }
+
+        function updateBreakdownCards() {
+            const latestWeek = weeklyProgress[weeklyProgress.length - 1];
+            const previousWeek = weeklyProgress.length > 1 ? weeklyProgress[weeklyProgress.length - 2] : null;
+
+            document.getElementById('missingMandatory').textContent = latestWeek.missingMandatory;
+            document.getElementById('missingMandatoryTrend').innerHTML = previousWeek ? 
+                createAbsoluteTrendIndicator(latestWeek.missingMandatory, previousWeek.missingMandatory, true) : '';
+            document.getElementById('missingQuality').textContent = latestWeek.missingQuality;
+            document.getElementById('missingQualityTrend').innerHTML = previousWeek ? 
+                createAbsoluteTrendIndicator(latestWeek.missingQuality, previousWeek.missingQuality, true) : '';
+            document.getElementById('missingApprovals').textContent = latestWeek.missingApprovals;
+            document.getElementById('missingApprovalsTrend').innerHTML = previousWeek ? 
+                createAbsoluteTrendIndicator(latestWeek.missingApprovals, previousWeek.missingApprovals, true) : '';
+            document.getElementById('missingSurveys').textContent = latestWeek.missingSurveys;
+            document.getElementById('missingSurveysTrend').innerHTML = previousWeek ? 
+                createAbsoluteTrendIndicator(latestWeek.missingSurveys, previousWeek.missingSurveys, true) : '';
+        }
+
+        function rebuildChartAndTable() {
+            // Build actual data
+            const actualDataMap = new Map();
+            const actualDataPoints = [];
+            const millisecondsPerWeek = 7 * 24 * 60 * 60 * 1000;
+            
+            weeklyProgress.forEach(week => {
+                const weekTotalReqs = week.totalApplications * 4;
+                const weekMissing = week.missingMandatory + week.missingQuality + 
+                                   (includeApprovals ? week.missingApprovals : 0) + 
+                                   week.missingSurveys;
+                const weekComplete = weekTotalReqs - weekMissing;
+                const weekPercentage = (weekComplete / weekTotalReqs) * 100;
+                const weekDate = parseDate(week.date);
+                
+                actualDataMap.set(week.date, {
+                    complete: weekComplete,
+                    percentage: weekPercentage,
+                    totalReqs: weekTotalReqs,
+                    missing: weekMissing,
+                    date: weekDate
+                });
+                
+                actualDataPoints.push({
+                    dateStr: week.date,
+                    date: weekDate,
+                    complete: weekComplete,
+                    percentage: weekPercentage,
+                    totalReqs: weekTotalReqs,
+                    missing: weekMissing
+                });
+            });
+            
+            actualDataPoints.sort((a, b) => a.date - b.date);
+            
+            // Get first actual data point for expected line calculation
+            const firstActualData = actualDataPoints.length > 0 ? actualDataPoints[0] : null;
+            
+            // Build chart data
+            const chartData = [];
+            let currentChartDate = new Date(startDate);
+            let weekNumber = 0;
+
+            const chartEndDate = new Date(targetDate.getTime() + millisecondsPerWeek);
+            let currentProjectionBase = null;
+
+            while (currentChartDate <= chartEndDate) {
+                const dateStr = `${currentChartDate.getFullYear()}-${String(currentChartDate.getMonth() + 1).padStart(2, '0')}-${String(currentChartDate.getDate()).padStart(2, '0')}`;
+                
+                let actualComplete = null;
+                let actualPercentage = null;
+                let currentTotalReqs = totalRequirements;
+                
+                if (actualDataMap.has(dateStr)) {
+                    const data = actualDataMap.get(dateStr);
+                    actualComplete = data.complete;
+                    actualPercentage = data.percentage;
+                    currentTotalReqs = data.totalReqs;
+                    
+                    currentProjectionBase = {
+                        date: new Date(currentChartDate),
+                        complete: actualComplete,
+                        totalReqs: currentTotalReqs,
+                        percentage: actualPercentage
+                    };
+                }
+                
+                let targetComplete = null;
+                let targetPercentage = null;
+
+                if (currentProjectionBase) {
+                    const weeksFromBaseToTarget = Math.max(1, Math.ceil((targetDate - currentProjectionBase.date) / millisecondsPerWeek));
+                    const weeksFromBaseToCurrent = Math.round((currentChartDate - currentProjectionBase.date) / millisecondsPerWeek);
+                    
+                    const currentScope = currentTotalReqs;
+                    
+                    const targetDateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+                    
+                    if (dateStr === targetDateStr) {
+                        targetComplete = currentScope;
+                        targetPercentage = 100;
+                    } else {
+                        const remainingWork = currentScope - currentProjectionBase.complete;
+                        const weeklyTargetRate = remainingWork / weeksFromBaseToTarget;
+                        
+                        targetComplete = currentProjectionBase.complete + (weeklyTargetRate * weeksFromBaseToCurrent);
+                        
+                        if (targetComplete > currentScope) {
+                            targetComplete = currentScope;
+                        }
+                        
+                        targetPercentage = (targetComplete / currentScope) * 100;
+                    }
+                }
+                
+                // Calculate expected linear progress from first actual data point to target
+                let expectedComplete = null;
+                let expectedPercentage = null;
+                
+                if (firstActualData && currentChartDate >= firstActualData.date) {
+                    const totalWeeksFromFirstToTarget = Math.max(1, Math.ceil((targetDate - firstActualData.date) / millisecondsPerWeek));
+                    const weeksFromFirstToCurrent = Math.round((currentChartDate - firstActualData.date) / millisecondsPerWeek);
+                    
+                    const remainingFromFirst = currentTotalReqs - firstActualData.complete;
+                    const expectedRate = remainingFromFirst / totalWeeksFromFirstToTarget;
+                    
+                    expectedComplete = Math.round(firstActualData.complete + (expectedRate * weeksFromFirstToCurrent));
+                    
+                    if (expectedComplete > currentTotalReqs) {
+                        expectedComplete = currentTotalReqs;
+                    }
+                    
+                    expectedPercentage = (expectedComplete / currentTotalReqs) * 100;
+                }
+                
+                chartData.push({
+                    date: new Date(currentChartDate),
+                    dateStr: dateStr,
+                    week: weekNumber + 1,
+                    complete: actualComplete,
+                    completePercentage: actualPercentage,
+                    target: targetComplete !== null ? Math.round(targetComplete) : null,
+                    targetPercentage: targetPercentage,
+                    expected: expectedComplete,
+                    expectedPercentage: expectedPercentage,
+                    totalScope: currentTotalReqs,
+                    totalPercentage: 100
+                });
+                
+                currentChartDate = new Date(currentChartDate.getTime() + millisecondsPerWeek);
+                weekNumber++;
+            }
+            
+            // Populate progress table
+            const tableBody = document.getElementById('progressTable');
+            tableBody.innerHTML = '';
+            
+            weeklyProgress.forEach((week, index) => {
+                const weekTotalReqs = week.totalApplications * 4;
+                const weekMissing = week.missingMandatory + week.missingQuality + 
+                                   (includeApprovals ? week.missingApprovals : 0) + 
+                                   week.missingSurveys;
+                const weekComplete = weekTotalReqs - weekMissing;
+                const weekPercentage = (weekComplete / weekTotalReqs * 100);
+                const weekDate = parseDate(week.date);
+                const weekWeeksRemaining = Math.max(1, Math.ceil((targetDate - weekDate) / millisecondsPerWeek));
+                const weekItemsPerWeek = Math.round(weekMissing / weekWeeksRemaining);
+                const weekPercentagePerWeek = ((weekMissing / weekTotalReqs) / weekWeeksRemaining * 100);
+                
+                let totalAppsTrend = '', totalReqsTrend = '', weeklyItemsChange = '';
+                let weeklyPercentChange = '', itemsPerWeekTrend = '', percentPerWeekTrend = '';
+                let itemsRemainingTrend = '';
+                
+                if (index > 0) {
+                    const prevWeekData = weeklyProgress[index - 1];
+                    const prevWeekTotalReqs = prevWeekData.totalApplications * 4;
+                    const prevMissing = prevWeekData.missingMandatory + prevWeekData.missingQuality + 
+                                       (includeApprovals ? prevWeekData.missingApprovals : 0) + 
+                                       prevWeekData.missingSurveys;
+                    const prevComplete = prevWeekTotalReqs - prevMissing;
+                    const prevPercentage = (prevComplete / prevWeekTotalReqs * 100);
+                    
+                    totalAppsTrend = createAbsoluteTrendIndicator(week.totalApplications, prevWeekData.totalApplications, true);
+                    totalReqsTrend = createAbsoluteTrendIndicator(weekTotalReqs, prevWeekTotalReqs, true);
+                    
+                    const prevWeekDate = parseDate(prevWeekData.date);
+                    const prevWeekWeeksRemaining = Math.max(1, Math.ceil((targetDate - prevWeekDate) / millisecondsPerWeek));
+                    const prevWeekItemsPerWeek = Math.round(prevMissing / prevWeekWeeksRemaining);
+                    const prevWeekPercentagePerWeek = ((prevMissing / prevWeekTotalReqs) / prevWeekWeeksRemaining * 100);
+                    
+                    weeklyItemsChange = createAbsoluteTrendIndicator(weekComplete, prevComplete, false);
+                    weeklyPercentChange = createPercentageDifferenceTrendIndicator(weekPercentage, prevPercentage, false);
+                    itemsRemainingTrend = createAbsoluteTrendIndicator(weekMissing, prevMissing, true);
+                    itemsPerWeekTrend = createAbsoluteTrendIndicator(weekItemsPerWeek, prevWeekItemsPerWeek, true);
+                    percentPerWeekTrend = createPercentageDifferenceTrendIndicator(weekPercentagePerWeek, prevWeekPercentagePerWeek, true);
+                }
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(weekDate)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div>${week.totalApplications.toLocaleString()}</div>
+                        <div class="text-xs font-semibold mt-1">${totalAppsTrend}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div>${weekTotalReqs.toLocaleString()}</div>
+                        <div class="text-xs font-semibold mt-1">${totalReqsTrend}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div>${weekComplete.toLocaleString()}</div>
+                        <div class="text-xs font-semibold mt-1">${weeklyItemsChange}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div>${weekPercentage.toFixed(1)}%</div>
+                        <div class="text-xs font-semibold mt-1">${weeklyPercentChange}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div>${weekMissing.toLocaleString()}</div>
+                        <div class="text-xs font-semibold mt-1">${itemsRemainingTrend}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div>${weekItemsPerWeek.toLocaleString()}</div>
+                        <div class="text-xs font-semibold mt-1">${itemsPerWeekTrend}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div>${weekPercentagePerWeek.toFixed(1)}%</div>
+                        <div class="text-xs font-semibold mt-1">${percentPerWeekTrend}</div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            return chartData;
+        }
+
+        function createChart(viewType) {
+            const isPercentage = viewType === 'percentage';
+            
+            // Find the maximum scope value across all weeks
+            const maxScope = d3.max(chartData, d => isPercentage ? d.totalPercentage : d.totalScope);
+            const yMax = maxScope;
+            
+            d3.select('#chart').html('');
+            
+            const margin = {top: 20, right: 40, bottom: 120, left: 90};
+            const width = 1100 - margin.left - margin.right;
+            const height = 550 - margin.top - margin.bottom;
+            
+            const svg = d3.select('#chart')
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+            
+            const x = d3.scaleTime()
+                .domain(d3.extent(chartData, d => d.date))
+                .range([0, width]);
+            
+            const y = d3.scaleLinear()
+                .domain([0, yMax])
+                .range([height, 0]);
+            
+            svg.append("g")
+                .attr("class", "grid")
+                .attr("opacity", 0.1)
+                .call(d3.axisLeft(y).tickSize(-width).tickFormat(""));
+            
+            const xAxis = d3.axisBottom(x)
+                .tickValues(chartData.map(d => d.date))
+                .tickFormat(d3.timeFormat("%b %d"));
+            
+            svg.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(xAxis)
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .style("text-anchor", "end")
+                .style("font-size", "12px");
+            
+            svg.append("g")
+                .call(d3.axisLeft(y).tickFormat(d => isPercentage ? d + '%' : d.toLocaleString()))
+                .selectAll("text")
+                .style("font-size", "12px");
+            
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 0 - margin.left + 15)
+                .attr("x", 0 - (height / 2))
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .style("font-size", "14px")
+                .style("font-weight", "600")
+                .text(isPercentage ? "Completion %" : "Items Completed");
+            
+            svg.append("text")
+                .attr("x", width / 2)
+                .attr("y", height + 60)
+                .style("text-anchor", "middle")
+                .style("font-size", "14px")
+                .style("font-weight", "600")
+                .text("Week");
+            
+            // Total Scope line (solid gray)
+            const totalLine = d3.line()
+                .x(d => x(d.date))
+                .y(d => y(isPercentage ? d.totalPercentage : d.totalScope));
+            
+            svg.append("path")
+                .datum(chartData)
+                .attr("fill", "none")
+                .attr("stroke", "#9ca3af")
+                .attr("stroke-width", 2)
+                .attr("d", totalLine);
+            
+            // Expected Progress line (dashed gray) - only for points that have data
+            const expectedData = chartData.filter(d => d.expected !== null);
+            
+            if (expectedData.length > 0) {
+                const expectedLine = d3.line()
+                    .x(d => x(d.date))
+                    .y(d => y(isPercentage ? d.expectedPercentage : d.expected));
+                
+                svg.append("path")
+                    .datum(expectedData)
+                    .attr("fill", "none")
+                    .attr("stroke", "#9ca3af")
+                    .attr("stroke-width", 2)
+                    .attr("stroke-dasharray", "5,5")
+                    .attr("d", expectedLine);
+            }
+            
+            const targetData = chartData.filter(d => d.target !== null);
+            
+            if (targetData.length > 0) {
+                const area = d3.area()
+                    .x(d => x(d.date))
+                    .y0(height)
+                    .y1(d => y(isPercentage ? d.targetPercentage : d.target));
+                
+                svg.append("path")
+                    .datum(targetData)
+                    .attr("fill", "#10b981")
+                    .attr("fill-opacity", 0.3)
+                    .attr("d", area);
+                
+                const targetLine = d3.line()
+                    .x(d => x(d.date))
+                    .y(d => y(isPercentage ? d.targetPercentage : d.target));
+                
+                svg.append("path")
+                    .datum(targetData)
+                    .attr("fill", "none")
+                    .attr("stroke", "#10b981")
+                    .attr("stroke-width", 3)
+                    .attr("d", targetLine);
+            }
+            
+            const actualData = chartData.filter(d => isPercentage ? d.completePercentage !== null : d.complete !== null);
+            
+            if (actualData.length > 0) {
+                const actualLine = d3.line()
+                    .x(d => x(d.date))
+                    .y(d => y(isPercentage ? d.completePercentage : d.complete));
+                
+                svg.append("path")
+                    .datum(actualData)
+                    .attr("fill", "none")
+                    .attr("stroke", "#3b82f6")
+                    .attr("stroke-width", 3)
+                    .attr("d", actualLine);
+                
+                svg.selectAll(".actual-point")
+                    .data(actualData)
+                    .enter()
+                    .append("circle")
+                    .attr("cx", d => x(d.date))
+                    .attr("cy", d => y(isPercentage ? d.completePercentage : d.complete))
+                    .attr("r", 6)
+                    .attr("fill", "#3b82f6");
+            }
+            
+            const legend = svg.append("g")
+                .attr("transform", `translate(${width/2 - 350}, ${height + 85})`);
+            
+            legend.append("line")
+                .attr("x1", 0).attr("x2", 40).attr("y1", 0).attr("y2", 0)
+                .attr("stroke", "#9ca3af").attr("stroke-width", 2);
+            legend.append("text").attr("x", 45).attr("y", 5).text("Total Scope")
+                .style("font-size", "13px").style("font-weight", "500");
+            
+            legend.append("line")
+                .attr("x1", 150).attr("x2", 190).attr("y1", 0).attr("y2", 0)
+                .attr("stroke", "#9ca3af").attr("stroke-width", 2).attr("stroke-dasharray", "5,5");
+            legend.append("text").attr("x", 195).attr("y", 5).text("Expected Progress")
+                .style("font-size", "13px").style("font-weight", "500");
+            
+            legend.append("line")
+                .attr("x1", 345).attr("x2", 385).attr("y1", 0).attr("y2", 0)
+                .attr("stroke", "#10b981").attr("stroke-width", 3);
+            legend.append("text").attr("x", 390).attr("y", 5).text("Target Progress")
+                .style("font-size", "13px").style("font-weight", "500");
+            
+            legend.append("line")
+                .attr("x1", 535).attr("x2", 575).attr("y1", 0).attr("y2", 0)
+                .attr("stroke", "#3b82f6").attr("stroke-width", 3);
+            legend.append("text").attr("x", 580).attr("y", 5).text("Actual Progress")
+                .style("font-size", "13px").style("font-weight", "500");
+        }
+
+        // Event listeners
+        document.getElementById('btnItems').addEventListener('click', () => {
+            currentView = 'items';
+            document.getElementById('btnItems').className = 'px-4 py-2 rounded-lg font-medium transition-colors bg-blue-600 text-white';
+            document.getElementById('btnPercentage').className = 'px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300';
+            createChart('items');
+        });
+        
+        document.getElementById('btnPercentage').addEventListener('click', () => {
+            currentView = 'percentage';
+            document.getElementById('btnPercentage').className = 'px-4 py-2 rounded-lg font-medium transition-colors bg-blue-600 text-white';
+            document.getElementById('btnItems').className = 'px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300';
+            createChart('percentage');
+        });
+
+        document.getElementById('toggleApprovals').addEventListener('click', () => {
+            includeApprovals = !includeApprovals;
+            const btn = document.getElementById('toggleApprovals');
+            btn.textContent = includeApprovals ? 'Include' : 'Exclude';
+            btn.className = includeApprovals 
+                ? 'text-xs px-2 py-1 bg-yellow-200 hover:bg-yellow-300 rounded font-medium transition-colors'
+                : 'text-xs px-2 py-1 bg-gray-300 hover:bg-gray-400 rounded font-medium transition-colors';
+            
+            recalculateMetrics();
+            chartData = rebuildChartAndTable();
+            createChart(currentView);
+        });
+
+        // Initialize on page load
+        populateOrgDropdown();
+    </script>
+</body>
+</html>

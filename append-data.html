@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Append Current Week Data</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="data.js"></script>
+    <script src="current-week.js"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Append Current Week Data to data.js</h1>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Current Week Information</h2>
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                <p class="text-sm text-gray-700">
+                    <strong>Date:</strong> <span id="current-date" class="font-mono"></span>
+                </p>
+            </div>
+            
+            <div class="mb-4">
+                <h3 class="text-lg font-medium text-gray-600 mb-2">Preview - All Applications</h3>
+                <div id="all-preview" class="bg-gray-50 p-3 rounded text-sm font-mono overflow-x-auto max-h-40 overflow-y-auto"></div>
+            </div>
+            
+            <div class="mb-4">
+                <h3 class="text-lg font-medium text-gray-600 mb-2">Preview - CMMC Applications</h3>
+                <div id="cmmc-preview" class="bg-gray-50 p-3 rounded text-sm font-mono overflow-x-auto max-h-40 overflow-y-auto"></div>
+            </div>
+            
+            <div class="mb-4">
+                <h3 class="text-lg font-medium text-gray-600 mb-2">Preview - Non-CMMC Applications</h3>
+                <div id="noncmmc-preview" class="bg-gray-50 p-3 rounded text-sm font-mono overflow-x-auto max-h-40 overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Generated Code</h2>
+            <p class="text-sm text-gray-600 mb-4">
+                Copy the code below and paste it at the end of your <code class="bg-gray-100 px-2 py-1 rounded">data.js</code> file,
+                replacing the existing variable declarations.
+            </p>
+            <div class="relative">
+                <button 
+                    onclick="copyToClipboard()" 
+                    class="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm transition-colors"
+                >
+                    Copy to Clipboard
+                </button>
+                <pre id="output" class="bg-gray-900 text-green-400 p-4 rounded overflow-x-auto text-sm" style="padding-top: 3rem;"></pre>
+            </div>
+        </div>
+
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-2">Instructions</h3>
+            <ol class="list-decimal list-inside text-sm text-yellow-700 space-y-1">
+                <li>Update the <code class="bg-yellow-100 px-1 rounded">date</code> and data in <code class="bg-yellow-100 px-1 rounded">current-week.js</code></li>
+                <li>Open this HTML file in your browser</li>
+                <li>Click "Copy to Clipboard" button above</li>
+                <li>Open <code class="bg-yellow-100 px-1 rounded">data.js</code> and replace the entire file content with the copied code</li>
+                <li>Refresh your dashboard to see the updated data</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function appendWeeklyData() {
+            // Deep clone the original data objects to avoid modifying them
+            const updatedAll = JSON.parse(JSON.stringify(ORG_DATA));
+            const updatedCmmc = JSON.parse(JSON.stringify(ORG_DATA_CMMC));
+            const updatedNonCmmc = JSON.parse(JSON.stringify(ORG_DATA_NONCMMC));
+
+            // Append data to All Applications
+            Object.keys(CURRENT_WEEK_DATA.all).forEach(orgName => {
+                if (updatedAll[orgName]) {
+                    const newWeek = {
+                        date: CURRENT_WEEK_DATA.date,
+                        ...CURRENT_WEEK_DATA.all[orgName]
+                    };
+                    updatedAll[orgName].weeklyProgress.push(newWeek);
+                }
+            });
+
+            // Append data to CMMC Applications
+            Object.keys(CURRENT_WEEK_DATA.cmmc).forEach(orgName => {
+                if (updatedCmmc[orgName]) {
+                    const newWeek = {
+                        date: CURRENT_WEEK_DATA.date,
+                        ...CURRENT_WEEK_DATA.cmmc[orgName]
+                    };
+                    updatedCmmc[orgName].weeklyProgress.push(newWeek);
+                }
+            });
+
+            // Append data to Non-CMMC Applications
+            Object.keys(CURRENT_WEEK_DATA.noncmmc).forEach(orgName => {
+                if (updatedNonCmmc[orgName]) {
+                    const newWeek = {
+                        date: CURRENT_WEEK_DATA.date,
+                        ...CURRENT_WEEK_DATA.noncmmc[orgName]
+                    };
+                    updatedNonCmmc[orgName].weeklyProgress.push(newWeek);
+                }
+            });
+
+            return { updatedAll, updatedCmmc, updatedNonCmmc };
+        }
+
+        function generateOutputCode() {
+            const { updatedAll, updatedCmmc, updatedNonCmmc } = appendWeeklyData();
+
+            const code = `// Application Completion Tracking Data
+// Last updated: ${CURRENT_WEEK_DATA.date}
+
+// All Applications (CMMC + Non-CMMC)
+const ORG_DATA = ${JSON.stringify(updatedAll, null, 4)};
+
+// CMMC Applications Data
+const ORG_DATA_CMMC = ${JSON.stringify(updatedCmmc, null, 4)};
+
+// Non-CMMC Applications Data
+const ORG_DATA_NONCMMC = ${JSON.stringify(updatedNonCmmc, null, 4)};
+`;
+
+            return code;
+        }
+
+        function displayPreviews() {
+            // Display current date
+            document.getElementById('current-date').textContent = CURRENT_WEEK_DATA.date;
+
+            // Display All Applications preview
+            const allSample = CURRENT_WEEK_DATA.all['All'];
+            document.getElementById('all-preview').textContent = 
+                `Total: ${allSample.totalApplications}, Missing Mandatory: ${allSample.missingMandatory}, ` +
+                `Missing Quality: ${allSample.missingQuality}, Missing Approvals: ${allSample.missingApprovals}, ` +
+                `Missing Surveys: ${allSample.missingSurveys}`;
+
+            // Display CMMC Applications preview
+            const cmmcSample = CURRENT_WEEK_DATA.cmmc['All'];
+            document.getElementById('cmmc-preview').textContent = 
+                `Total: ${cmmcSample.totalApplications}, Missing Mandatory: ${cmmcSample.missingMandatory}, ` +
+                `Missing Quality: ${cmmcSample.missingQuality}, Missing Approvals: ${cmmcSample.missingApprovals}, ` +
+                `Missing Surveys: ${cmmcSample.missingSurveys}`;
+
+            // Display Non-CMMC Applications preview
+            const nonCmmcSample = CURRENT_WEEK_DATA.noncmmc['All'];
+            document.getElementById('noncmmc-preview').textContent = 
+                `Total: ${nonCmmcSample.totalApplications}, Missing Mandatory: ${nonCmmcSample.missingMandatory}, ` +
+                `Missing Quality: ${nonCmmcSample.missingQuality}, Missing Approvals: ${nonCmmcSample.missingApprovals}, ` +
+                `Missing Surveys: ${nonCmmcSample.missingSurveys}`;
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('output').textContent;
+            navigator.clipboard.writeText(output).then(() => {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                button.classList.add('bg-green-500');
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('bg-green-500');
+                    button.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                }, 2000);
+            });
+        }
+
+        // Generate and display output on page load
+        document.getElementById('output').textContent = generateOutputCode();
+        displayPreviews();
+    </script>
+</body>
+</html>

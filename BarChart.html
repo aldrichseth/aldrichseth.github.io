@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Completion Status</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="data.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="w-full max-w-7xl mx-auto p-6 pb-32">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Application Completion Status</h1>
+        
+        <!-- All Applications Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-6">All Applications (CMMC & Non-CMMC)</h2>
+            <div class="mb-8">
+                <h3 class="text-lg font-medium text-gray-600">By IT Tower</h3>
+                <div id="all-tower-chart"></div>
+            </div>
+            <div>
+                <h3 class="text-lg font-medium text-gray-600">By Site</h3>
+                <div id="all-site-chart"></div>
+            </div>
+        </div>
+
+        <!-- CMMC Applications Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-6">CMMC Applications</h2>
+            <div class="mb-8">
+                <h3 class="text-lg font-medium text-gray-600 ">By IT Tower</h3>
+                <div id="cmmc-tower-chart"></div>
+            </div>
+            <div>
+                <h3 class="text-lg font-medium text-gray-600 ">By Site</h3>
+                <div id="cmmc-site-chart"></div>
+            </div>
+        </div>
+
+        <!-- Non-CMMC Applications Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-6">Non-CMMC Applications</h2>
+            <div class="mb-8">
+                <h3 class="text-lg font-medium text-gray-600 ">By IT Tower</h3>
+                <div id="noncmmc-tower-chart"></div>
+            </div>
+            <div>
+                <h3 class="text-lg font-medium text-gray-600 ">By Site</h3>
+                <div id="noncmmc-site-chart"></div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="flex justify-center gap-6 text-sm mb-8 flex-wrap">
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-green-500 rounded"></div>
+                <span>≥80% Complete</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-orange-500 rounded"></div>
+                <span>50-79% Complete</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-red-500 rounded"></div>
+                <span>&lt;50% Complete</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <span>On Track</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <span>Off Track</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-green-600 font-bold">↑</span>
+                <span>Improved</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-red-600 font-bold">↓</span>
+                <span>Declined</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fixed Toggle Button -->
+    <div class="fixed bottom-6 left-6 z-50">
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg shadow-lg p-4 max-w-xs">
+            <div class="text-sm text-gray-600 mb-2 font-medium">Include Missing Approvals:</div>
+            <button 
+                id="toggle-approvals"
+                class="px-4 py-2 rounded font-medium transition-colors bg-yellow-500 text-white w-full hover:bg-yellow-600"
+            >
+                Included
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIGURATION ARRAYS =====
+        const TOWER_CONFIG = [
+            'IT / ERP',
+            'IT / HRIT',
+            'IT / I&O',
+            'IT / Security',
+            'IT / Winchester IT',
+            'IT / M&E'
+        ];
+
+        const SITE_CONFIG = [
+            'Site: EALT/OXFD',
+            'Site: LCAAP'
+        ];
+
+        const CMMC_TOWER_CONFIG = [
+            'IT / I&O',
+            'IT / Security',
+            'IT / Winchester IT',
+            'IT / M&E'
+        ];
+
+        const CMMC_SITE_CONFIG = [
+            'Site: EALT/OXFD',
+            'Site: LCAAP'
+        ];
+
+        const NONCMMC_TOWER_CONFIG = [
+            'IT / ERP',
+            'IT / HRIT',
+            'IT / I&O',
+            'IT / Security',
+            'IT / Winchester IT',
+            'IT / M&E'
+        ];
+
+        const NONCMMC_SITE_CONFIG = [
+            'Site: EALT/OXFD',
+            'Site: LCAAP'
+        ];
+
+        // ===== CHART LOGIC =====
+        let includeApprovals = true;
+        const TREND_DISPLAY_THRESHOLD = 25; // Don't show trend if percentage is below this
+
+        function parseDate(dateStr) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+
+        function calculateMetrics(orgName, dataSource) {
+            const orgData = dataSource[orgName];
+            if (!orgData) {
+                console.warn(`No data found for organization: ${orgName} in this data source`);
+                return null;
+            }
+
+            const latestWeek = orgData.weeklyProgress[orgData.weeklyProgress.length - 1];
+            const previousWeek = orgData.weeklyProgress.length > 1 ? orgData.weeklyProgress[orgData.weeklyProgress.length - 2] : null;
+            
+            const totalApplications = latestWeek.totalApplications;
+            
+            const mandatoryComplete = totalApplications - latestWeek.missingMandatory;
+            const qualityComplete = totalApplications - latestWeek.missingQuality;
+            const approvalsComplete = totalApplications - latestWeek.missingApprovals;
+            const surveysComplete = totalApplications - latestWeek.missingSurveys;
+            
+            let completedPoints, totalPoints;
+            
+            if (includeApprovals) {
+                completedPoints = mandatoryComplete + qualityComplete + approvalsComplete + surveysComplete;
+                totalPoints = totalApplications * 4;
+            } else {
+                completedPoints = mandatoryComplete + qualityComplete + surveysComplete;
+                totalPoints = totalApplications * 3;
+            }
+            
+            const percentage = totalPoints > 0 ? (completedPoints / totalPoints) * 100 : 0;
+
+            // Calculate trends (ABSOLUTE percentage point change)
+            let prevCompletedPoints = null;
+            let prevTotalPoints = null;
+            let prevPercentage = null;
+            let percentageChange = null;
+            let itemsChange = null;
+            let totalAppsChange = null;
+
+            if (previousWeek) {
+                const prevTotalApplications = previousWeek.totalApplications;
+                totalAppsChange = totalApplications - prevTotalApplications;
+                
+                const prevMandatoryComplete = prevTotalApplications - previousWeek.missingMandatory;
+                const prevQualityComplete = prevTotalApplications - previousWeek.missingQuality;
+                const prevApprovalsComplete = prevTotalApplications - previousWeek.missingApprovals;
+                const prevSurveysComplete = prevTotalApplications - previousWeek.missingSurveys;
+                
+                if (includeApprovals) {
+                    prevCompletedPoints = prevMandatoryComplete + prevQualityComplete + prevApprovalsComplete + prevSurveysComplete;
+                    prevTotalPoints = prevTotalApplications * 4;
+                } else {
+                    prevCompletedPoints = prevMandatoryComplete + prevQualityComplete + prevSurveysComplete;
+                    prevTotalPoints = prevTotalApplications * 3;
+                }
+                
+                prevPercentage = prevTotalPoints > 0 ? (prevCompletedPoints / prevTotalPoints) * 100 : 0;
+                percentageChange = percentage - prevPercentage;
+                itemsChange = completedPoints - prevCompletedPoints;
+                
+                console.log(`${orgName}: Current=${percentage.toFixed(1)}%, Prev=${prevPercentage.toFixed(1)}%, Change=${percentageChange.toFixed(1)} pp, Items=${itemsChange}`);
+            } else {
+                console.log(`${orgName}: Current=${percentage.toFixed(1)}% (no previous week data)`);
+            }
+
+            // Calculate on-track status and target percentage needed
+            const [startYear, startMonth, startDay] = orgData.startDate.split('-').map(Number);
+            const startDate = new Date(startYear, startMonth - 1, startDay);
+            const [targetYear, targetMonth, targetDay] = orgData.targetDate.split('-').map(Number);
+            const targetDate = new Date(targetYear, targetMonth - 1, targetDay);
+            const currentDate = parseDate(latestWeek.date);
+
+            const millisecondsPerWeek = 7 * 24 * 60 * 60 * 1000;
+            
+            let isOnTrack = false;
+            let currentTargetPercentage = null;
+            let currentExpectedPercentage = null;
+            let offTrackAmount = null;
+            let offTrackItems = null;
+            let targetNextWeekIncrease = null;
+            let prevTargetNextWeekIncrease = null;
+            
+            // Build expected line from first data point
+            const firstWeek = orgData.weeklyProgress[0];
+            const firstDate = parseDate(firstWeek.date);
+            
+            // Calculate first week's percentage
+            const firstTotalApplications = firstWeek.totalApplications;
+            const firstMandatoryComplete = firstTotalApplications - firstWeek.missingMandatory;
+            const firstQualityComplete = firstTotalApplications - firstWeek.missingQuality;
+            const firstApprovalsComplete = firstTotalApplications - firstWeek.missingApprovals;
+            const firstSurveysComplete = firstTotalApplications - firstWeek.missingSurveys;
+            
+            let firstCompletedPoints, firstTotalPoints;
+            if (includeApprovals) {
+                firstCompletedPoints = firstMandatoryComplete + firstQualityComplete + firstApprovalsComplete + firstSurveysComplete;
+                firstTotalPoints = firstTotalApplications * 4;
+            } else {
+                firstCompletedPoints = firstMandatoryComplete + firstQualityComplete + firstSurveysComplete;
+                firstTotalPoints = firstTotalApplications * 3;
+            }
+            const firstPercentage = firstTotalPoints > 0 ? (firstCompletedPoints / firstTotalPoints) * 100 : 0;
+            
+            // Calculate expected linear progress from first data point to target
+            const totalWeeksFromFirstToTarget = Math.max(1, Math.ceil((targetDate - firstDate) / millisecondsPerWeek));
+            const weeksFromFirstToCurrent = Math.round((currentDate - firstDate) / millisecondsPerWeek);
+            
+            const remainingFromFirst = 100 - firstPercentage;
+            const expectedRate = remainingFromFirst / totalWeeksFromFirstToTarget;
+            currentExpectedPercentage = firstPercentage + (expectedRate * weeksFromFirstToCurrent);
+            
+            // Calculate target progress increase needed for next week (from current week)
+            const weeksFromCurrentToTarget = Math.max(1, Math.ceil((targetDate - currentDate) / millisecondsPerWeek));
+            const remainingWork = 100 - percentage;
+            const weeklyTargetRate = remainingWork / weeksFromCurrentToTarget;
+            targetNextWeekIncrease = weeklyTargetRate; // This is the INCREASE needed, not the total
+            
+            // Calculate previous week's target increase (for trend)
+            if (previousWeek) {
+                const prevDate = parseDate(previousWeek.date);
+                const weeksFromPrevToTarget = Math.max(1, Math.ceil((targetDate - prevDate) / millisecondsPerWeek));
+                const weeksFromPrevToCurrent = Math.round((currentDate - prevDate) / millisecondsPerWeek);
+                
+                const remainingWorkPrev = 100 - prevPercentage;
+                const weeklyTargetRatePrev = remainingWorkPrev / weeksFromPrevToTarget;
+                prevTargetNextWeekIncrease = weeklyTargetRatePrev;
+                
+                currentTargetPercentage = prevPercentage + (weeklyTargetRatePrev * weeksFromPrevToCurrent);
+                
+                // Determine which baseline to use
+                const isAboveExpected = percentage >= currentExpectedPercentage;
+                
+                if (isAboveExpected) {
+                    isOnTrack = percentage >= currentExpectedPercentage;
+                    offTrackAmount = percentage - currentExpectedPercentage;
+                    // Calculate items difference from expected
+                    const expectedPoints = (currentExpectedPercentage / 100) * totalPoints;
+                    offTrackItems = Math.round(completedPoints - expectedPoints);
+                } else {
+                    isOnTrack = percentage >= currentTargetPercentage;
+                    offTrackAmount = percentage - currentTargetPercentage;
+                    // Calculate items difference from target
+                    const targetPoints = (currentTargetPercentage / 100) * totalPoints;
+                    offTrackItems = Math.round(completedPoints - targetPoints);
+                }
+            } else {
+                isOnTrack = percentage >= currentExpectedPercentage - 5;
+                currentTargetPercentage = currentExpectedPercentage;
+                offTrackAmount = percentage - currentExpectedPercentage;
+                const expectedPoints = (currentExpectedPercentage / 100) * totalPoints;
+                offTrackItems = Math.round(completedPoints - expectedPoints);
+            }
+
+            return {
+                name: orgName,
+                complete: completedPoints,
+                total: totalPoints,
+                totalApplications: totalApplications,
+                percentage: Math.round(percentage * 10) / 10,
+                percentageChange: percentageChange,
+                itemsChange: itemsChange,
+                totalAppsChange: totalAppsChange,
+                isOnTrack: isOnTrack,
+                targetPercentage: currentTargetPercentage,
+                expectedPercentage: currentExpectedPercentage,
+                offTrackAmount: offTrackAmount,
+                offTrackItems: offTrackItems,
+                targetNextWeekIncrease: targetNextWeekIncrease,
+                prevTargetNextWeekIncrease: prevTargetNextWeekIncrease
+            };
+        }
+
+        function getBarColor(percentage) {
+            if (percentage >= 80) return '#10b981';
+            if (percentage >= 50) return '#f59e0b';
+            return '#ef4444';
+        }
+
+        function createBarChart(elementId, data, margin = { top: 70, right: 30, bottom: 100, left: 60 }) {
+            d3.select(`#${elementId}`).selectAll("*").remove();
+
+            if (data.length === 0) {
+                d3.select(`#${elementId}`).append("p").text("No data available").attr("class", "text-gray-500 text-center py-4");
+                return;
+            }
+
+            const container = document.getElementById(elementId);
+            const width = container.offsetWidth;
+            const height = 400;
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            const svg = d3.select(`#${elementId}`)
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const g = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .domain(data.map(d => d.name))
+                .range([0, innerWidth])
+                .padding(0.2);
+
+            const y = d3.scaleLinear()
+                .domain([0, 100])
+                .range([innerHeight, 0]);
+
+            g.append("g")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .style("text-anchor", "end")
+                .style("font-size", "14px")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em");
+
+            g.append("g")
+                .call(d3.axisLeft(y))
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -50)
+                .attr("x", -innerHeight / 2)
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .style("fill", "#000")
+                .text("Completion %");
+
+            const tooltip = d3.select("body")
+                .append("div")
+                .style("position", "absolute")
+                .style("background", "white")
+                .style("border", "1px solid #ccc")
+                .style("border-radius", "8px")
+                .style("padding", "12px")
+                .style("box-shadow", "0 4px 6px rgba(0,0,0,0.1)")
+                .style("pointer-events", "none")
+                .style("opacity", 0)
+                .style("z-index", 1000)
+                .style("font-size", "13px")
+                .style("max-width", "320px");
+
+            g.selectAll(".bar")
+                .data(data)
+                .enter()
+                .append("path")
+                .attr("class", "bar")
+                .attr("d", d => {
+                    const xPos = x(d.name);
+                    const yPos = y(d.percentage);
+                    const barWidth = x.bandwidth();
+                    const radius = 8;
+                    
+                    return `
+                        M ${xPos},${innerHeight}
+                        L ${xPos},${yPos + radius}
+                        Q ${xPos},${yPos} ${xPos + radius},${yPos}
+                        L ${xPos + barWidth - radius},${yPos}
+                        Q ${xPos + barWidth},${yPos} ${xPos + barWidth},${yPos + radius}
+                        L ${xPos + barWidth},${innerHeight}
+                        Z
+                    `;
+                })
+                .attr("fill", d => getBarColor(d.percentage))
+                .on("mouseover", function(event, d) {
+                    tooltip.transition().duration(200).style("opacity", 1);
+                    
+                    // Organization name
+                    let html = `<div style="font-weight: 700; margin-bottom: 8px; font-size: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px;">${d.name}</div>`;
+                    
+                    // Items complete
+                    html += `<div style="margin-bottom: 6px;">
+                        <strong>Items Complete:</strong> ${d.complete.toLocaleString()} / ${d.total.toLocaleString()} | ${d.percentage.toFixed(1)}%
+                    </div>`;
+                    
+                    // Total scope increase (if available)
+                    if (d.totalAppsChange !== null) {
+                        const arrow = d.totalAppsChange >= 0 ? '↑' : '↓';
+                        const sign = d.totalAppsChange >= 0 ? '+' : '';
+                        const color = d.totalAppsChange > 0 ? '#ef4444' : (d.totalAppsChange < 0 ? '#10b981' : '#6b7280');
+                        html += `<div style="margin-bottom: 6px;">
+                            <strong>Total Scope Change:</strong> 
+                            <span style="color: ${color}; font-weight: 600;">
+                                ${arrow} ${sign}${d.totalAppsChange} Application${Math.abs(d.totalAppsChange) !== 1 ? 's' : ''}
+                            </span>
+                        </div>`;
+                    }
+                    
+                    // Weekly trend
+                    if (d.percentageChange !== null && d.itemsChange !== null) {
+                        const arrow = d.percentageChange > 0 ? '↑' : (d.percentageChange < 0 ? '↓' : '→');
+                        const color = d.percentageChange > 0 ? '#10b981' : (d.percentageChange < 0 ? '#ef4444' : '#6b7280');
+                        const sign = d.percentageChange > 0 ? '+' : '';
+                        const itemsSign = d.itemsChange >= 0 ? '+' : '';
+                        html += `<div style="margin-bottom: 6px;">
+                            <strong>Weekly Trend:</strong> 
+                            <span style="color: ${color}; font-weight: 600;">
+                                ${arrow} ${sign}${d.percentageChange.toFixed(1)}% (${itemsSign}${d.itemsChange} items)
+                            </span>
+                        </div>`;
+                    }
+                    
+                    // On-track/off-track status
+                    const trackIcon = d.isOnTrack ? '✓' : '✗';
+                    const trackColor = d.isOnTrack ? '#10b981' : '#ef4444';
+                    const trackStatus = d.isOnTrack ? 'On-Track' : 'Off-Track';
+                    const sign = d.offTrackAmount >= 0 ? '+' : '';
+                    const itemsSign = d.offTrackItems >= 0 ? '+' : '';
+                    html += `<div style="margin-bottom: 6px;">
+                        <span style="color: ${trackColor}; font-weight: 700;">
+                            ${trackIcon} ${trackStatus}
+                        </span> | 
+                        <span style="color: ${trackColor}; font-weight: 600;">
+                            ${sign}${d.offTrackAmount.toFixed(1)}% (${itemsSign}${d.offTrackItems} items)
+                        </span>
+                    </div>`;
+                    
+                    // Target for next week
+                    if (d.targetNextWeekIncrease !== null) {
+                        let targetTrendText = '';
+                        if (d.prevTargetNextWeekIncrease !== null) {
+                            const targetChange = d.targetNextWeekIncrease - d.prevTargetNextWeekIncrease;
+                            const targetArrow = targetChange > 0 ? '↑' : (targetChange < 0 ? '↓' : '→');
+                            const targetSign = targetChange > 0 ? '+' : '';
+                            const targetColor = targetChange < 0 ? '#10b981' : (targetChange > 0 ? '#ef4444' : '#6b7280');
+                            targetTrendText = ` <span style="color: ${targetColor}; font-weight: 600;">${targetArrow} ${targetSign}${Math.abs(targetChange).toFixed(1)}%</span>`;
+                        }
+                        html += `<div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #e5e7eb;">
+                            <strong>Target for Next Week:</strong> ${d.targetNextWeekIncrease.toFixed(1)}% increase${targetTrendText}
+                        </div>`;
+                    }
+
+                    tooltip.html(html)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.transition().duration(200).style("opacity", 0);
+                });
+
+            // Helper function to create outlined text
+            function createOutlinedText(group, x, y, text, fontSize, fillColor, strokeColor = '#000000', strokeWidth = 3) {
+                group.append("text")
+                    .attr("x", x)
+                    .attr("y", y)
+                    .attr("text-anchor", "middle")
+                    .attr("dominant-baseline", "middle")
+                    .style("fill", "none")
+                    .style("stroke", strokeColor)
+                    .style("stroke-width", strokeWidth)
+                    .style("stroke-linejoin", "round")
+                    .style("font-weight", "bold")
+                    .style("font-size", fontSize)
+                    .text(text);
+                
+                group.append("text")
+                    .attr("x", x)
+                    .attr("y", y)
+                    .attr("text-anchor", "middle")
+                    .attr("dominant-baseline", "middle")
+                    .style("fill", fillColor)
+                    .style("font-weight", "bold")
+                    .style("font-size", fontSize)
+                    .text(text);
+            }
+
+            // Labels inside bars with trend info
+            g.selectAll(".label-group")
+                .data(data)
+                .enter()
+                .append("g")
+                .attr("class", "label-group")
+                .each(function(d) {
+                    const group = d3.select(this);
+                    const barHeight = innerHeight - y(d.percentage);
+                    const xPos = x(d.name) + x.bandwidth() / 2;
+                    
+                    // Calculate if we need space for trend info
+                    const hasTrend = d.percentageChange !== null && d.itemsChange !== null && d.percentage >= TREND_DISPLAY_THRESHOLD;
+                    
+                    // Minimum height needed based on content
+                    const minHeightForPercentageOnly = 25;
+                    const minHeightForBoth = 60;
+                    
+                    let isPercentageInside = false;
+                    let isTrendInside = false;
+                    
+                    if (barHeight >= minHeightForBoth && hasTrend) {
+                        // Both can fit inside
+                        isPercentageInside = true;
+                        isTrendInside = true;
+                    } else if (barHeight >= minHeightForPercentageOnly && !hasTrend) {
+                        // Only percentage, and it fits
+                        isPercentageInside = true;
+                    } else if (barHeight >= minHeightForPercentageOnly && hasTrend) {
+                        // Percentage fits, but not trend
+                        isPercentageInside = true;
+                        isTrendInside = false;
+                    } else {
+                        // Nothing fits inside
+                        isPercentageInside = false;
+                        isTrendInside = false;
+                    }
+                    
+                    // Trend with items (if available and above threshold)
+                    if (hasTrend) {
+                        let trendColor = '#9ca3af';
+                        if (d.percentageChange > 0) {
+                            trendColor = '#86efac';
+                        } else if (d.percentageChange < 0) {
+                            trendColor = '#fca5a5';
+                        }
+                        
+                        const arrow = d.percentageChange > 0 ? '↑' : (d.percentageChange < 0 ? '↓' : '→');
+                        const sign = d.percentageChange > 0 ? '+' : '';
+                        const itemsSign = d.itemsChange >= 0 ? '+' : '';
+                        
+                        let trendY;
+                        let trendTextColor;
+                        
+                        if (isTrendInside) {
+                            trendY = y(d.percentage) + barHeight / 2 + 10;
+                            trendTextColor = trendColor;
+                        } else {
+                            // When outside, place well ABOVE the bar top with more clearance
+                            trendY = y(d.percentage) - 38;
+                            trendTextColor = "#374151";
+                        }
+                        
+                        createOutlinedText(
+                            group,
+                            xPos,
+                            trendY,
+                            `${arrow} ${sign}${Math.abs(d.percentageChange).toFixed(1)}% (${itemsSign}${d.itemsChange})`,
+                            "11px",
+                            trendTextColor
+                        );
+                    }
+                    
+                    // Percentage label
+                    if (d.percentage > 0) {
+                        let percentageY;
+                        let percentageColor;
+                        
+                        if (isPercentageInside) {
+                            percentageY = isTrendInside ? y(d.percentage) + barHeight / 2 - 10 : y(d.percentage) + barHeight / 2;
+                            percentageColor = "white";
+                        } else {
+                            // Adjust position based on whether trend is showing
+                            percentageY = hasTrend ? y(d.percentage) - 22 : y(d.percentage) - 15;
+                            percentageColor = "#374151";
+                        }
+                        
+                        createOutlinedText(
+                            group,
+                            xPos,
+                            percentageY,
+                            `${d.percentage.toFixed(1)}%`,
+                            "14px",
+                            percentageColor
+                        );
+                    }
+                });
+
+            // On-track indicators above bars
+            g.selectAll(".track-indicator")
+                .data(data)
+                .enter()
+                .append("g")
+                .attr("class", "track-indicator")
+                .attr("transform", d => {
+                    const barHeight = innerHeight - y(d.percentage);
+                    const hasTrend = d.percentageChange !== null && d.itemsChange !== null && d.percentage >= TREND_DISPLAY_THRESHOLD;
+                    const minHeightForPercentageOnly = 25;
+                    const isPercentageInside = barHeight >= minHeightForPercentageOnly;
+                    
+                    // Position indicator above all labels with more clearance
+                    let offsetY;
+                    if (!isPercentageInside && hasTrend) {
+                        // Both outside: trend at -38, percentage at -22, indicator needs to be above trend
+                        offsetY = -54;
+                    } else if (!isPercentageInside && !hasTrend) {
+                        // Only percentage outside at -15, indicator at -31
+                        offsetY = -31;
+                    } else {
+                        // Labels inside, normal position
+                        offsetY = -20;
+                    }
+                    
+                    return `translate(${x(d.name) + x.bandwidth() / 2}, ${y(d.percentage) + offsetY})`;
+                })
+                .each(function(d) {
+                    const g = d3.select(this);
+                    
+                    if (d.isOnTrack) {
+                        g.append("circle")
+                            .attr("r", 10)
+                            .attr("fill", "#10b981");
+                        g.append("path")
+                            .attr("d", "M -3,-1 L -1,3 L 4,-3")
+                            .attr("stroke", "white")
+                            .attr("stroke-width", 2)
+                            .attr("fill", "none");
+                    } else {
+                        g.append("circle")
+                            .attr("r", 10)
+                            .attr("fill", "#ef4444");
+                        g.append("path")
+                            .attr("d", "M -3,-3 L 3,3 M 3,-3 L -3,3")
+                            .attr("stroke", "white")
+                            .attr("stroke-width", 2);
+                    }
+                });
+        }
+
+        function renderAllCharts() {
+            console.log('=== Rendering Charts ===');
+            console.log('Include Approvals:', includeApprovals);
+            
+            // All Applications
+            console.log('\n--- ALL APPLICATIONS ---');
+            const allTowerData = TOWER_CONFIG.map(tower => {
+                const metrics = calculateMetrics(tower, ORG_DATA);
+                if (!metrics) return null;
+                
+                let displayName = metrics.name.replace('IT / ', '');
+                if (tower === 'IT / Security') {
+                    displayName = 'IT Security (GIS)';
+                }
+                
+                return { ...metrics, name: displayName };
+            }).filter(Boolean);
+
+            const allSiteData = SITE_CONFIG.map(site => {
+                const metrics = calculateMetrics(site, ORG_DATA);
+                return metrics ? { ...metrics, name: metrics.name.replace('Site: ', '') } : null;
+            }).filter(Boolean);
+
+            // CMMC Applications
+            console.log('\n--- CMMC APPLICATIONS ---');
+            const cmmcTowerData = CMMC_TOWER_CONFIG.map(tower => {
+                const metrics = calculateMetrics(tower, ORG_DATA_CMMC);
+                if (!metrics) return null;
+                
+                let displayName = metrics.name.replace('IT / ', '');
+                if (tower === 'IT / Security') {
+                    displayName = 'IT Security (GIS)';
+                }
+                
+                return { ...metrics, name: displayName };
+            }).filter(Boolean);
+
+            const cmmcSiteData = CMMC_SITE_CONFIG.map(site => {
+                const metrics = calculateMetrics(site, ORG_DATA_CMMC);
+                return metrics ? { ...metrics, name: metrics.name.replace('Site: ', '') } : null;
+            }).filter(Boolean);
+
+            // Non-CMMC Applications
+            console.log('\n--- NON-CMMC APPLICATIONS ---');
+            const nonCmmcTowerData = NONCMMC_TOWER_CONFIG.map(tower => {
+                const metrics = calculateMetrics(tower, ORG_DATA_NONCMMC);
+                if (!metrics) return null;
+                
+                let displayName = metrics.name.replace('IT / ', '');
+                if (tower === 'IT / Security') {
+                    displayName = 'IT Security (GIS)';
+                }
+                
+                return { ...metrics, name: displayName };
+            }).filter(Boolean);
+
+            const nonCmmcSiteData = NONCMMC_SITE_CONFIG.map(site => {
+                const metrics = calculateMetrics(site, ORG_DATA_NONCMMC);
+                return metrics ? { ...metrics, name: metrics.name.replace('Site: ', '') } : null;
+            }).filter(Boolean);
+
+            createBarChart('all-tower-chart', allTowerData);
+            createBarChart('all-site-chart', allSiteData);
+            createBarChart('cmmc-tower-chart', cmmcTowerData);
+            createBarChart('cmmc-site-chart', cmmcSiteData);
+            createBarChart('noncmmc-tower-chart', nonCmmcTowerData);
+            createBarChart('noncmmc-site-chart', nonCmmcSiteData);
+        }
+
+        const toggleButton = document.getElementById('toggle-approvals');
+        toggleButton.addEventListener('click', function() {
+            includeApprovals = !includeApprovals;
+            
+            if (includeApprovals) {
+                toggleButton.textContent = 'Included';
+                toggleButton.className = 'px-4 py-2 rounded font-medium transition-colors bg-yellow-500 text-white w-full hover:bg-yellow-600';
+            } else {
+                toggleButton.textContent = 'Excluded';
+                toggleButton.className = 'px-4 py-2 rounded font-medium transition-colors bg-gray-300 text-gray-700 w-full hover:bg-gray-400';
+            }
+            
+            renderAllCharts();
+        });
+
+        renderAllCharts();
+        window.addEventListener('resize', renderAllCharts);
+    </script>
+</body>
+</html>
